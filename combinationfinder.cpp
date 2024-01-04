@@ -1,58 +1,103 @@
 #include "combinationfinder.h"
 
-combinationFinder::combinationFinder(QVector<QVector<int>> &newCombos, int newElements, int newRank, int startingComboCount){
+//factorial lambda
+auto fact = [](const int n){int k = n; for(int i=n-1;i>1;--i){k *= i;} return std::max(k,1);};
+
+QVector<QVector<int>*> findAllCombinations(QVector<int>* elements){
+
+    int eltCount = elements->size();
+
+    //auto fact = [](const int n){int k = n; for(int i=n-1;i>1;--i){k *= i;} return std::max(k,1);};
+    QVector<QVector<int>*> combos(0);
+    for (int i = 1;i<=31;++i){
+        combos.push_back(new QVector<int>(0));
+    }
+
+    for (int i=0;i<eltCount;i++){
+        combos.at(i)->push_back(elements->at(i));
+    }
+    combos[combos.size()-1] = elements;
+
+
+    QVector<combinationFinder*> finders(0);
+    for (int i = 2;i<eltCount;++i){
+        finders.push_back(new combinationFinder(&combos, eltCount, i));
+        if (i>2)finders[i-2]->connectCombinationsFinders(*finders[i-3]);
+    }
+    finders[finders.size()-1]->activate();
+
+    return combos;
+}
+
+combinationFinder::combinationFinder(QVector<QVector<int>*>* newCombos, int newElements, int smpSize, QObject *parent)
+: QObject{parent}
+{
 
     elements = newElements;
     combos = newCombos;
-    rank = newRank;
-    combinationsAvailable = startingComboCount;
+    sample = smpSize;
+
+    skipValues = new QVector<int>(0);
 
 
     //list of possible combination counts for five elements with samples of size {2,3,4}
-    start = elements + rank;
-
-    //factorial lambda
-    auto fact = [](const int n){int k = n; for(int i=n-1;i>1;--i){k *= i;} return std::max(k,1);};
+    insertionPoint = elements;
 
     //determines starting position in list for sample size relative to sample size
-    for (int i=2;i<(rank+2);++i){
-        start += int((fact(elements))/(fact(i)*fact(elements-i)));
+    for (int i=2;i<(sample);++i){
+        insertionPoint += int((fact(elements))/(fact(i)*fact(elements-i)));
     }
 
-    end = start + int((fact(elements))/(fact(rank)*fact(elements-rank)));
-    calculateFrom = end + 1;
+    end = insertionPoint + int((fact(elements))/(fact(sample)*fact(elements-sample)));
+    calculateFrom = end;
+    lastAvailable = end - 1;
+
+    inactive = true;
+
+    QObject::connect(this, &combinationFinder::activateSelf, this, &combinationFinder::combinationAvailable);
 }
 
-/*void combinationFinder::findCombinations(){
-    int pos = start;
-    for (int i=end+1;i<std::min(end+10,32);++i){
-        for (int j = (i-(end+1));j<(combos[i].size());++j){
-            std::copy(combos[i].begin(),combos[i].end(),std::back_inserter(combos[pos]));
-            combos[pos].erase(combos[pos].begin()+j);
-            pos++;
-            emit combinationCompleted();
-        }
-        combinationsAvailable--;
-    }
-}*/
+combinationFinder::~combinationFinder()
+{
+    // destructor
+}
 
-void combinationFinder::combinationAvailable(){
-    combinationsAvailable++;
-    calculateCombinations();
+void combinationFinder::activate(){
+    emit activateSelf();
+}
+
+void combinationFinder::combinationAvailable(int skipFirst){
+    lastAvailable++;
+    skipValues->push_back(skipFirst);
+    //this might cause problems w/ parallelism
+    if (inactive){
+        inactive = false;
+        calculateCombinations();
+    }
 }
 
 void combinationFinder::calculateCombinations(){
-    for (int j = (calculateFrom-(end+1));j<(combos[calculateFrom].size());++j){
-        std::copy(combos[calculateFrom].begin(),combos[calculateFrom].end(),std::back_inserter(combos[start]));
-        combos[start].erase(combos[start].begin()+j);
-        start++;
-        if (rank>0) emit combinationCompleted();
+
+    for (int j = skipValues->at(0);j<combos->at(calculateFrom)->size();j++){
+        //copies combos at calculation point into combos at insertion point
+        for (int i = 0;i<combos->at(calculateFrom)->size();i++){
+            combos->at(insertionPoint)->push_back(combos->at(calculateFrom)->at(i));
+        }
+        //deletes element j from copied vector and increments to next insertion point
+        combos->at(insertionPoint)->erase(combos->at(insertionPoint)->begin()+j);
+        insertionPoint++;
+        //if not calculating smallest possible combinations, signal next thread down to begin working w/ new combination
+        if (sample>2) emit combinationCompleted(j);
     }
+    skipValues->removeFirst();
+    //increments to next calculation point to begin
     calculateFrom++;
-    combinationsAvailable--;
-    if (combinationsAvailable > 0) calculateCombinations();
+    //this wont work, need to rework before implementing parallelism
+    if (calculateFrom <= lastAvailable) {
+        calculateCombinations();
+    }else inactive = true;
 }
 
-void combinationFinder::connectCombinationsFinders(combinationFinder back){
-    QObject::connect(this, SIGNAL(combinationFinder::combinationCompleted()), &back, SLOT(combinationFinder::combinationCompleted()));
+void combinationFinder::connectCombinationsFinders(combinationFinder& back){
+    QObject::connect(this, &combinationFinder::combinationCompleted, &back, &combinationFinder::combinationAvailable);
 }

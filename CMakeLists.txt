@@ -24,6 +24,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
         combinationfinder.h combinationfinder.cpp
+        game.h game.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET yahtzeeSolver APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

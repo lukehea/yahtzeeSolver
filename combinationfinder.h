@@ -3,33 +3,38 @@
 
 #include "yahtzeesolver.h"
 #include <QVector>
+#include <QtMath>
+
+QVector<QVector<int>*> findAllCombinations(QVector<int> *elements);
 
 class combinationFinder : public QObject {
     Q_OBJECT
 
 public:
-    combinationFinder();
-    combinationFinder(QVector<QVector<int>> &newCombos, const int newElements, const int newRank, const int startingComboCount);
+    explicit combinationFinder(QVector<QVector<int>*>* newCombos, int newElements, int smpSize, QObject *parent = nullptr);
     ~combinationFinder();
-    void connectCombinationsFinders(combinationFinder back);
-    combinationFinder &operator=(combinationFinder &other);
+    void connectCombinationsFinders(combinationFinder& back);
+    void activate();
 
 public slots:
-    void combinationAvailable();
+    void combinationAvailable(int skipFirst);
 
 signals:
-    void combinationCompleted();
+    void activateSelf(int skipFirst = 0);
+    void combinationCompleted(int skipFirst);
 
 private:
     void calculateCombinations();
 
-    QVector<QVector<int>> combos;
+    QVector<QVector<int>*>* combos;
+    QVector<int>* skipValues;
     int elements;
-    int rank;
-    int start;
+    int sample;
+    int insertionPoint;
     int end;
-    int combinationsAvailable;
     int calculateFrom;
+    int lastAvailable;
+    bool inactive;
 };
 
 #endif // COMBINATIONFINDER_H
