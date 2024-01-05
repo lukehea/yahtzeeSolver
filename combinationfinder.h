@@ -31,7 +31,6 @@ private:
     int elements;
     int sample;
     int insertionPoint;
-    int end;
     int calculateFrom;
     int lastAvailable;
     bool inactive;

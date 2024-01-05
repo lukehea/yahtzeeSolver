@@ -14,7 +14,7 @@ QVector<QVector<int>*> findAllCombinations(QVector<int>* elements){
     }
 
     for (int i=0;i<eltCount;i++){
-        combos.at(i)->push_back(elements->at(i));
+        combos[i]->push_back(elements->at(i));
     }
     combos[combos.size()-1] = elements;
 
@@ -48,9 +48,8 @@ combinationFinder::combinationFinder(QVector<QVector<int>*>* newCombos, int newE
         insertionPoint += int((fact(elements))/(fact(i)*fact(elements-i)));
     }
 
-    end = insertionPoint + int((fact(elements))/(fact(sample)*fact(elements-sample)));
-    calculateFrom = end;
-    lastAvailable = end - 1;
+    calculateFrom = insertionPoint + int((fact(elements))/(fact(sample)*fact(elements-sample)));
+    lastAvailable = calculateFrom - 1;
 
     inactive = true;
 
@@ -59,7 +58,13 @@ combinationFinder::combinationFinder(QVector<QVector<int>*>* newCombos, int newE
 
 combinationFinder::~combinationFinder()
 {
-    // destructor
+    delete skipValues;
+    delete &elements;
+    delete &insertionPoint;
+    delete &calculateFrom;
+    delete &lastAvailable;
+    delete &sample;
+    delete &inactive;
 }
 
 void combinationFinder::activate(){

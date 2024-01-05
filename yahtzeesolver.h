@@ -4,12 +4,16 @@
 #include <QMainWindow>
 #include <iterator>
 #include <iostream>
+#include <algorithm>
 #include <QSemaphore>
 #include <QString>
 #include <QVector>
+#include <QIcon>
 #include "combinationfinder.h"
+#include "dice.h"
 
 QVector<int> testRolls(QVector<int> rolled, int rolls);
+void cleanDuplicates(QVector<QVector<int>*> *combos, QVector<int> *toRemove, int start, int end);
 int getExValue(QVector<int> held, int rolls);
 
 QT_BEGIN_NAMESPACE
@@ -32,11 +36,9 @@ private:
     bool isValidRoll();
 
     Ui::yahtzeeSolver *ui;
-    QVector<int> dice;
+    QVector<dice*> activeDie;
     int rolls;
     int exValue;
-    QVector<QString> imageHandles;
-    QVector<QPixmap> diceImages;
-
 };
+
 #endif // YAHTZEESOLVER_H

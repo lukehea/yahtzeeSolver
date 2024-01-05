@@ -1,22 +1,28 @@
 #include "yahtzeesolver.h"
 #include "./ui_yahtzeesolver.h"
 
+QString upArrowHandle = "<:\\icons\\buttons\\upArrow>";
+QString downArrowHandle = "<:\\icons\\buttons\\downArrow>";
+QVector<QString> imageHandles = {":\\icons\\dice\\diceBackground.png",":\\icons\\dice\\diceOne.png",":\\icons\\dice\\diceTwo.png",":\\icons\\dice\\diceThree.png",":\\icons\\dice\\diceFour.png",":\\icons\\dice\\diceFive.png",":\\icons\\dice\\diceSix.png"};
+
 yahtzeeSolver::yahtzeeSolver(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::yahtzeeSolver)
 {
     ui->setupUi(this);
-    //lockIn = new Q
+    //QPushButton *upDiceOne = new QPushButton();
+    ui->upDice->setIcon(QPixmap(upArrowHandle));
     connect(ui->lockIn, &QPushButton::clicked, this, &yahtzeeSolver::testDiceValues);
 
-    dice = QVector<int>(5);
-    for (int i = 0;i<5;i++){
-        dice[i] = i+1;//change to 0
-    }
-    imageHandles = {":/icons/diceBackground.png",":/icons/diceOne.png",":/icons/diceTwo.png",":/icons/diceThree.png",":/icons/diceFour.png",":/icons/diceFive.png",":/icons/diceSix.png"};
-    diceImages = QVector<QPixmap>(5);
+    activeDie = QVector<dice*>(0);
     for (int i = 0;i<5;++i){
-        diceImages[i] = QPixmap(imageHandles[0]);
+        QPushButton* up = new QPushButton();
+        QPushButton* down = new QPushButton();
+        up->setParent(ui->frame);
+        up->setParent(ui);
+        activeDie.append(new dice());
+        connect(ui->up, &QPushButton::clicked, &activeDie[i], &dice::increase);
+        connect(ui->down, &QPushButton::clicked, &activeDie[i], &dice::decrease);
     }
     exValue = 0;
     rolls = 3;
@@ -25,6 +31,9 @@ yahtzeeSolver::yahtzeeSolver(QWidget *parent)
 yahtzeeSolver::~yahtzeeSolver()
 {
     delete ui;
+    delete &activeDie;
+    delete &rolls;
+    delete &exValue;
 }
 
 void yahtzeeSolver::testDiceValues()
@@ -34,18 +43,22 @@ void yahtzeeSolver::testDiceValues()
 
     //gets die to keep and expected value
     if (rolls>0){
+        QVector<int> dice(5);
+        for (int i = 0;i<5;i++){
+            dice[i] = activeDie[i]->value;
+        }
         QVector<int> keptDice = testRolls(dice, rolls);
         rolls--;
         for (int i = 0;i<5;i++){
-            dice[i] = keptDice[i];
-            diceImages[i] = imageHandles[dice[i]];
+            activeDie[i]->value = keptDice[i];
+            activeDie[i]->updateImg();
         }
         exValue = keptDice[5];
     }else{
         rolls = 3;
         for (int i = 0;i<5;i++){
-            dice[i] = i+1; //change to 0
-            diceImages[i] = imageHandles[dice[i]];
+            activeDie[i]->value = i+1; //change to 0
+            activeDie[i]->updateImg();
         }
         exValue = 0;
     }
@@ -53,13 +66,37 @@ void yahtzeeSolver::testDiceValues()
     ui->rollLabel->setText(QString::number(rolls));
 }
 
-void yahtzeeSolver::updateDiceImgs(){
-
-}
-
 bool yahtzeeSolver::isValidRoll(){
     for (int i = 0;i<5;++i){
-        if (dice[i] == 0) return false;
+        if (activeDie[i]->value == 0) return false;
     }
     return true;
+}
+
+dice::dice(QObject *parent)
+: QObject{parent}
+{
+    value = 0;
+    diceDisplayed = new QImage(imageHandles[0]);
+    //diceDisplayed->setParent(parent);
+}
+
+dice::~dice(){
+    delete diceDisplayed;
+    delete &value;
+}
+
+void dice::increase(){
+    value++;
+    this->updateImg();
+}
+
+void dice::decrease(){
+    value--;
+    this->updateImg();
+}
+
+void dice::updateImg(){
+    //change this ASAP
+    diceDisplayed = new QImage(imageHandles[value]);
 }
